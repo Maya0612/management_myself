@@ -1,30 +1,46 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:management_myself/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('app shows login form', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.pumpWidget(const HabitTrackerApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Chào mừng trở lại'), findsOneWidget);
+    expect(find.text('Đăng nhập'), findsOneWidget);
+    expect(find.textContaining('test@gmail.com'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('password hash verifies the original password', () {
+    final hashedPassword = hashPassword('123456', salt: 'fixed-salt');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(verifyPassword('123456', hashedPassword), isTrue);
+    expect(verifyPassword('wrong-password', hashedPassword), isFalse);
+  });
+
+  test('reminder time preserves 24-hour and legacy 12-hour values', () {
+    expect(encodeReminderTime(parseReminderTime('16:30')), '16:30');
+    expect(encodeReminderTime(parseReminderTime('4:30 PM')), '16:30');
+    expect(encodeReminderTime(parseReminderTime('12:15 AM')), '00:15');
+  });
+
+  test('weekly habit is due only on selected weekdays after creation', () {
+    final habit = Habit(
+      id: 1,
+      userId: 1,
+      name: 'Vận động',
+      description: '',
+      frequency: HabitFrequency.weekly,
+      weekdays: <int>[1, 3, 5],
+      reminderTime: '17:30',
+      isActive: true,
+      createdAt: DateTime(2026, 11, 2).toIso8601String(),
+    );
+
+    expect(habit.isDueOn(DateTime(2026, 11, 2)), isTrue);
+    expect(habit.isDueOn(DateTime(2026, 11, 3)), isFalse);
+    expect(habit.isDueOn(DateTime(2026, 11, 1)), isFalse);
   });
 }
